@@ -25,11 +25,11 @@ public class Record {
    */
   public static Map<String, String> create(String[] fields) {
     Map<String, String> entry = new HashMap<>();
-    entry.put("lastName", Objects.requireNonNull(fields[0]));
-    entry.put("firstName", Objects.requireNonNull(fields[1]));
-    entry.put("email", Objects.requireNonNull(fields[2]));
-    entry.put("favoriteColor", Objects.requireNonNull(fields[3]));
-    entry.put("dateOfBirth", Objects.requireNonNull(fields[4]));
+    entry.put("lastName", Objects.requireNonNull(fields[0]).trim());
+    entry.put("firstName", Objects.requireNonNull(fields[1]).trim());
+    entry.put("email", Objects.requireNonNull(fields[2]).trim());
+    entry.put("favoriteColor", Objects.requireNonNull(fields[3]).trim());
+    entry.put("dateOfBirth", Objects.requireNonNull(fields[4]).trim());
     return entry;
   }
 }

@@ -35,7 +35,7 @@ public class CommandLine {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CommandLine.class);
 
-  private static final String SYS_CURR_WORKING_DIR = System.getProperty("user.dir");
+  private static final Path SYS_CURR_WORKING_DIR = Paths.get(System.getProperty("user.dir"));
 
   private static final String WHITE_SPACE = " ";
 
@@ -45,6 +45,8 @@ public class CommandLine {
 
   // for debugging purposes, will be superseded by list commands
   private static final String CMD_SHOW = "show";
+
+  private final Path systemWorkingDir;
 
   private final InMemoryDatabase db;
 
@@ -57,10 +59,12 @@ public class CommandLine {
         db,
         LineReaderBuilder.builder()
             .terminal(TerminalBuilder.builder().system(true).build())
-            .build());
+            .build(),
+        SYS_CURR_WORKING_DIR);
   }
 
-  CommandLine(InMemoryDatabase db, LineReader lineReader) {
+  CommandLine(InMemoryDatabase db, LineReader lineReader, Path systemWorkingDir) {
+    this.systemWorkingDir = systemWorkingDir;
     this.db = Objects.requireNonNull(db, "database cannot be null");
     this.lineReader = Objects.requireNonNull(lineReader, "line reader cannot be null");
     this.terminal = Objects.requireNonNull(lineReader.getTerminal(), "terminal cannot be null");
@@ -119,10 +123,11 @@ public class CommandLine {
       validateIngest(command);
       Path ingestFile = Paths.get(command.get(1));
       Path ingestFileToUse =
-          ingestFile.isAbsolute()
-              ? ingestFile
-              : Paths.get(SYS_CURR_WORKING_DIR).resolve(ingestFile);
+          ingestFile.isAbsolute() ? ingestFile : systemWorkingDir.resolve(ingestFile);
       ingest(ingestFileToUse).forEach(rec -> db.put(rec.get("email"), rec));
+      terminal
+          .writer()
+          .println(String.format("Successfully ingested '%s'", ingestFileToUse.toString()));
       return;
     }
 
@@ -163,7 +168,7 @@ public class CommandLine {
 
   private static void validateIngest(List<String> cmd) {
     assertThat(() -> cmd.size() == 2, "expecting 1 argument for 'ingest' command");
-    assertThat(() -> Paths.get(cmd.get(1)).toFile().exists(), "argument must be a valid path");
+    assertThat(() -> noError(() -> Paths.get(cmd.get(1))), "argument must be a valid path");
   }
 
   private static void assertThat(Supplier<Boolean> cond, String errMsg) {
@@ -175,6 +180,17 @@ public class CommandLine {
     }
     if (!check) {
       throw new IllegalArgumentException("error executing command, " + errMsg);
+    }
+  }
+
+  private static boolean noError(Runnable test) {
+    try {
+      test.run();
+      return true;
+    } catch (RuntimeException e) {
+      LOGGER.trace("noError test failed, returning false", e);
+      LOGGER.debug(e.getMessage());
+      return false;
     }
   }
 }
