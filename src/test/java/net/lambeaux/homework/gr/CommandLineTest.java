@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,9 +35,17 @@ public class CommandLineTest {
 
   private static final String DIR_SAMPLE_DATA = "/sample-data/";
 
-  private static final String FILE_EMPTY_DOT_CSV = "empty.csv";
+  private static final String FILE_UNSUPPORTED_DOT_TXT = "unsupported.txt";
 
-  private static final String FILE_SAMPLE_CSV_DOT_TXT = "sample-csv.txt";
+  private static final String FILE_SAMPLE_DOT_CSV = "sample.csv";
+
+  private static final String FILE_SAMPLE_DOT_PSV = "sample.psv";
+
+  private static final String FILE_SAMPLE_DOT_SSV = "sample.ssv";
+
+  private static final String FOLDER_THAT_EXISTS = "folder-that-exists";
+
+  private static final String DOES_NOT_EXIST = "does-not-exist";
 
   @Rule public TemporaryFolder folder = new TemporaryFolder();
 
@@ -50,23 +59,21 @@ public class CommandLineTest {
 
   private CommandLine commandLine;
 
+  private static void copyTestResource(String fileName, File dest) throws IOException {
+    try (InputStream in = CommandLineTest.class.getResourceAsStream(DIR_SAMPLE_DATA + fileName)) {
+      Files.copy(in, dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    }
+  }
+
   @Before
   public void before() throws IOException {
     File dirRoot = folder.getRoot();
-    File fileCsv = folder.newFile(FILE_EMPTY_DOT_CSV);
-    File fileTxt = folder.newFile(FILE_SAMPLE_CSV_DOT_TXT);
+    folder.newFolder(FOLDER_THAT_EXISTS);
 
-    folder.newFolder("folder-that-exists");
-
-    try (InputStream in =
-        CommandLineTest.class.getResourceAsStream(DIR_SAMPLE_DATA + FILE_EMPTY_DOT_CSV)) {
-      Files.copy(in, fileCsv.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    }
-
-    try (InputStream in =
-        CommandLineTest.class.getResourceAsStream(DIR_SAMPLE_DATA + FILE_SAMPLE_CSV_DOT_TXT)) {
-      Files.copy(in, fileTxt.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    }
+    copyTestResource(FILE_UNSUPPORTED_DOT_TXT, folder.newFile(FILE_UNSUPPORTED_DOT_TXT));
+    copyTestResource(FILE_SAMPLE_DOT_CSV, folder.newFile(FILE_SAMPLE_DOT_CSV));
+    copyTestResource(FILE_SAMPLE_DOT_PSV, folder.newFile(FILE_SAMPLE_DOT_PSV));
+    copyTestResource(FILE_SAMPLE_DOT_SSV, folder.newFile(FILE_SAMPLE_DOT_SSV));
 
     doReturn(mockTerminal).when(mockLineReader).getTerminal();
     doReturn(mockPrintWriter).when(mockTerminal).writer();
@@ -83,71 +90,111 @@ public class CommandLineTest {
   }
 
   @Test
-  public void testIngestCommandRel() throws IOException {
-    commandLine.handleInput("ingest sample-csv.txt");
+  public void testIngestCsvRel() throws IOException {
+    Path abs = folder.getRoot().toPath().resolve(FILE_SAMPLE_DOT_CSV);
+    String input = String.format("ingest %s", FILE_SAMPLE_DOT_CSV);
+    LOGGER.info("Running command '{}'", input);
+
+    commandLine.handleInput(input);
+
     verify(mockLineReader).getTerminal();
     verify(mockTerminal).writer();
     verify(mockPrintWriter)
-        .println(
-            eq(
-                String.format(
-                    "Successfully ingested '%s'",
-                    folder.getRoot().toPath().resolve("sample-csv.txt").toString())));
+        .println(eq(String.format("Successfully ingested '%s'", abs.toString())));
     verifyNoMoreInteractions(mockLineReader, mockTerminal, mockPrintWriter);
 
-    verify(mockDb)
-        .put(
-            eq("bob.smith@example.net"),
-            eq(record("Smith", "Bob", "bob.smith@example.net", "red", "01/23/1972")));
-    verify(mockDb)
-        .put(
-            eq("ted.weaver@example.net"),
-            eq(record("Weaver", "Ted", "ted.weaver@example.net", "green", "03/13/1988")));
-    verify(mockDb)
-        .put(
-            eq("redacted@example.net"),
-            eq(record("Ames", "Richard", "redacted@example.net", "unknown", "11/01/1923")));
-
-    verifyNoMoreInteractions(mockDb);
+    verifyMockDbSampleData();
   }
 
   @Test
-  public void testIngestCommandAbs() throws IOException {
-    String input =
-        String.format(
-            "ingest %s",
-            folder.getRoot().toPath().resolve("sample-csv.txt").toFile().getAbsolutePath());
+  public void testIngestCsvAbs() throws IOException {
+    Path abs = folder.getRoot().toPath().resolve(FILE_SAMPLE_DOT_CSV);
+    String input = String.format("ingest %s", abs.toString());
     LOGGER.info("Running command '{}'", input);
+
     commandLine.handleInput(input);
+
     verify(mockLineReader).getTerminal();
     verify(mockTerminal).writer();
     verify(mockPrintWriter)
-        .println(
-            eq(
-                String.format(
-                    "Successfully ingested '%s'",
-                    folder.getRoot().toPath().resolve("sample-csv.txt").toString())));
+        .println(eq(String.format("Successfully ingested '%s'", abs.toString())));
     verifyNoMoreInteractions(mockLineReader, mockTerminal, mockPrintWriter);
 
-    verify(mockDb)
-        .put(
-            eq("bob.smith@example.net"),
-            eq(record("Smith", "Bob", "bob.smith@example.net", "red", "01/23/1972")));
-    verify(mockDb)
-        .put(
-            eq("ted.weaver@example.net"),
-            eq(record("Weaver", "Ted", "ted.weaver@example.net", "green", "03/13/1988")));
-    verify(mockDb)
-        .put(
-            eq("redacted@example.net"),
-            eq(record("Ames", "Richard", "redacted@example.net", "unknown", "11/01/1923")));
+    verifyMockDbSampleData();
+  }
 
-    verifyNoMoreInteractions(mockDb);
+  @Test
+  public void testIngestPsvRel() throws IOException {
+    Path abs = folder.getRoot().toPath().resolve(FILE_SAMPLE_DOT_PSV);
+    String input = String.format("ingest %s", FILE_SAMPLE_DOT_PSV);
+    LOGGER.info("Running command '{}'", input);
+
+    commandLine.handleInput(input);
+
+    verify(mockLineReader).getTerminal();
+    verify(mockTerminal).writer();
+    verify(mockPrintWriter)
+        .println(eq(String.format("Successfully ingested '%s'", abs.toString())));
+    verifyNoMoreInteractions(mockLineReader, mockTerminal, mockPrintWriter);
+
+    verifyMockDbSampleData();
+  }
+
+  @Test
+  public void testIngestPsvAbs() throws IOException {
+    Path abs = folder.getRoot().toPath().resolve(FILE_SAMPLE_DOT_PSV);
+    String input = String.format("ingest %s", abs.toString());
+    LOGGER.info("Running command '{}'", input);
+
+    commandLine.handleInput(input);
+
+    verify(mockLineReader).getTerminal();
+    verify(mockTerminal).writer();
+    verify(mockPrintWriter)
+        .println(eq(String.format("Successfully ingested '%s'", abs.toString())));
+    verifyNoMoreInteractions(mockLineReader, mockTerminal, mockPrintWriter);
+
+    verifyMockDbSampleData();
+  }
+
+  @Test
+  public void testIngestSsvRel() throws IOException {
+    Path abs = folder.getRoot().toPath().resolve(FILE_SAMPLE_DOT_SSV);
+    String input = String.format("ingest %s", FILE_SAMPLE_DOT_SSV);
+    LOGGER.info("Running command '{}'", input);
+
+    commandLine.handleInput(input);
+
+    verify(mockLineReader).getTerminal();
+    verify(mockTerminal).writer();
+    verify(mockPrintWriter)
+        .println(eq(String.format("Successfully ingested '%s'", abs.toString())));
+    verifyNoMoreInteractions(mockLineReader, mockTerminal, mockPrintWriter);
+
+    verifyMockDbSampleData();
+  }
+
+  @Test
+  public void testIngestSsvAbs() throws IOException {
+    Path abs = folder.getRoot().toPath().resolve(FILE_SAMPLE_DOT_SSV);
+    String input = String.format("ingest %s", abs.toString());
+    LOGGER.info("Running command '{}'", input);
+
+    commandLine.handleInput(input);
+
+    verify(mockLineReader).getTerminal();
+    verify(mockTerminal).writer();
+    verify(mockPrintWriter)
+        .println(eq(String.format("Successfully ingested '%s'", abs.toString())));
+    verifyNoMoreInteractions(mockLineReader, mockTerminal, mockPrintWriter);
+
+    verifyMockDbSampleData();
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testIngestCommandNoArg() throws IOException {
     commandLine.handleInput("ingest");
+
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
@@ -155,7 +202,11 @@ public class CommandLineTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void testIngestCommandRelInvalidPathArg() throws IOException {
-    commandLine.handleInput("ingest does-not-exist/");
+    String input = String.format("ingest %s", DOES_NOT_EXIST);
+    LOGGER.info("Running command '{}'", input);
+
+    commandLine.handleInput(input);
+
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
@@ -163,12 +214,12 @@ public class CommandLineTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void testIngestCommandAbsInvalidPathArg() throws IOException {
-    String input =
-        String.format(
-            "ingest %s",
-            folder.getRoot().toPath().resolve("does-not-exist").toFile().getAbsolutePath());
+    Path abs = folder.getRoot().toPath().resolve(DOES_NOT_EXIST);
+    String input = String.format("ingest %s", abs.toString());
     LOGGER.info("Running command '{}'", input);
+
     commandLine.handleInput(input);
+
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
@@ -176,7 +227,11 @@ public class CommandLineTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void testIngestCommandRelDirectoryPath() throws IOException {
-    commandLine.handleInput("ingest folder-that-exists/");
+    String input = String.format("ingest %s", FOLDER_THAT_EXISTS);
+    LOGGER.info("Running command '{}'", input);
+
+    commandLine.handleInput(input);
+
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
@@ -184,32 +239,37 @@ public class CommandLineTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void testIngestCommandAbsDirectoryPath() throws IOException {
-    String input =
-        String.format(
-            "ingest %s",
-            folder.getRoot().toPath().resolve("folder-that-exists").toFile().getAbsolutePath());
+    Path abs = folder.getRoot().toPath().resolve(FOLDER_THAT_EXISTS);
+    String input = String.format("ingest %s", abs.toString());
     LOGGER.info("Running command '{}'", input);
+
     commandLine.handleInput(input);
+
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testIngestCommandRelNotTxtExtension() throws IOException {
-    commandLine.handleInput("ingest empty.csv");
+  public void testIngestCommandRelUnsupportedExtension() throws IOException {
+    String input = String.format("ingest %s", FILE_UNSUPPORTED_DOT_TXT);
+    LOGGER.info("Running command '{}'", input);
+
+    commandLine.handleInput(input);
+
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testIngestCommandAbsNotTxtExtension() throws IOException {
-    String input =
-        String.format(
-            "ingest %s", folder.getRoot().toPath().resolve("empty.csv").toFile().getAbsolutePath());
+  public void testIngestCommandAbsUnsupportedExtension() throws IOException {
+    Path abs = folder.getRoot().toPath().resolve(FILE_UNSUPPORTED_DOT_TXT);
+    String input = String.format("ingest %s", abs.toString());
     LOGGER.info("Running command '{}'", input);
+
     commandLine.handleInput(input);
+
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
@@ -218,11 +278,30 @@ public class CommandLineTest {
   @Test
   public void testUnrecognizedCommand() throws IOException {
     commandLine.handleInput("hi");
+
     verify(mockLineReader).getTerminal();
     verify(mockTerminal).writer();
     verify(mockPrintWriter).println(eq("Unrecognized command"));
     verifyNoMoreInteractions(mockLineReader, mockTerminal, mockPrintWriter);
     verifyZeroInteractions(mockDb);
+  }
+
+  // Set of verifications that map to valid files in src/test/resources/sample-data
+  private void verifyMockDbSampleData() {
+    verify(mockDb)
+        .put(
+            eq("bob.smith@example.net"),
+            eq(record("Smith", "Bob", "bob.smith@example.net", "red", "01/23/1972")));
+    verify(mockDb)
+        .put(
+            eq("ted.weaver@example.net"),
+            eq(record("Weaver", "Ted", "ted.weaver@example.net", "green", "03/13/1988")));
+    verify(mockDb)
+        .put(
+            eq("redacted@example.net"),
+            eq(record("Ames", "Richard", "redacted@example.net", "unknown", "11/01/1923")));
+
+    verifyNoMoreInteractions(mockDb);
   }
 
   private static Map<String, String> record(

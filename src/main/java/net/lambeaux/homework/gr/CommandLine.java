@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,12 +40,18 @@ public class CommandLine {
 
   private static final String WHITE_SPACE = " ";
 
-  private static final String EXT_TXT = "txt";
+  private static final String EXT_CSV = "csv";
+
+  private static final String EXT_PSV = "psv";
+
+  private static final String EXT_SSV = "ssv";
 
   private static final String CMD_INGEST = "ingest";
 
   // for debugging purposes, will be superseded by list commands
   private static final String CMD_SHOW = "show";
+
+  private final Map<String, IngestStrategy> parsers;
 
   private final Path systemWorkingDir;
 
@@ -68,6 +75,11 @@ public class CommandLine {
     this.db = Objects.requireNonNull(db, "database cannot be null");
     this.lineReader = Objects.requireNonNull(lineReader, "line reader cannot be null");
     this.terminal = Objects.requireNonNull(lineReader.getTerminal(), "terminal cannot be null");
+
+    this.parsers = new HashMap<>();
+    this.parsers.put(EXT_CSV, new IngestStrategy(","));
+    this.parsers.put(EXT_PSV, new IngestStrategy("\\|"));
+    this.parsers.put(EXT_SSV, new IngestStrategy(WHITE_SPACE));
   }
 
   /**
@@ -148,7 +160,7 @@ public class CommandLine {
     terminal.writer().println("Unrecognized command");
   }
 
-  private static List<Map<String, String>> ingest(Path filePath) throws IOException {
+  private List<Map<String, String>> ingest(Path filePath) throws IOException {
     File file = Objects.requireNonNull(filePath, "filePath cannot be null").toFile();
     if (!file.exists()) {
       throw new IllegalArgumentException("file " + file.toString() + " must exist");
@@ -157,13 +169,11 @@ public class CommandLine {
       throw new IllegalArgumentException("file " + file.toString() + " must be a file with data");
     }
     String absPath = file.getAbsolutePath();
-    if (!EXT_TXT.equals(absPath.substring(absPath.lastIndexOf('.') + 1))) {
-      throw new IllegalArgumentException("file " + file.toString() + " is not a .txt file");
+    String ext = absPath.substring(absPath.lastIndexOf('.') + 1);
+    if (!parsers.containsKey(ext)) {
+      throw new IllegalArgumentException("file " + file.toString() + " is not a supported format");
     }
-    return Files.lines(filePath)
-        .map(line -> line.split(","))
-        .map(Record::create)
-        .collect(Collectors.toList());
+    return parsers.get(ext).read(filePath);
   }
 
   private static void validateIngest(List<String> cmd) {
@@ -191,6 +201,26 @@ public class CommandLine {
       LOGGER.trace("noError test failed, returning false", e);
       LOGGER.debug(e.getMessage());
       return false;
+    }
+  }
+
+  /** Can parse input files based upon the provided delimiter. */
+  private static class IngestStrategy {
+
+    private final String delimiter;
+
+    public IngestStrategy(String delimiter) {
+      if (Objects.requireNonNull(delimiter, "delimiter cannot be null").isEmpty()) {
+        throw new IllegalArgumentException("delimiter cannot be empty");
+      }
+      this.delimiter = delimiter;
+    }
+
+    public List<Map<String, String>> read(Path filePath) throws IOException {
+      return Files.lines(filePath)
+          .map(line -> line.split(delimiter))
+          .map(Record::create)
+          .collect(Collectors.toList());
     }
   }
 }

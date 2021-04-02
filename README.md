@@ -9,17 +9,19 @@ Repository for the submission. Details to follow.
 - By "display dates in the format `M/D/YYYY`" it meant `MM/DD/YYYY` since months and days are not
   limited to single digits.
 
-#### Input
+#### Input Content
 
-- Input files always have their fields in the specified order from the instructions (`lastName`,
+- Input content always has their fields in the specified order from the instructions (`lastName`,
   `firstName`, `email`, `favoriteColor`, `dateOfBirth`).
-- Input files will have extension `.txt` regardless of the internal delimiter.
+- No fields within the input files will be `null` or empty.
+- Dates as input to the system are in the form `MM/DD/YYYY`.
+- Emails are unique and can be keyed on; duplicate emails result in overwriting prior record.
+
+#### Input Files
+
+- Input files can have extensions `.csv`, `.psv`, or `.ssv` and it is assumed the proper delimiter,
+  and **only** the proper delimiter, is used correctly in each. For example, if commas (`,`) appear
+  in the document, then pipes (`|`) cannot appear, and vice versa.
 - Input files are reasonably small enough such that the full contents of 10 - 200 documents can fit
   into memory at once (an approximation derived from Jetty's default threading configuration -
   refer to https://www.eclipse.org/jetty/documentation/jetty-9/index.php).
-- If commas (`,`) appear in the document, then pipes (`|`) cannot appear, and vice versa.
-- No fields within the input files will be `null` or empty.
-- Dates as input to the system are in the form `MM/DD/YYYY`.
-- Emails are unique and can be keyed on; since the system doesn't yet support updates, duplicate
-  emails result in error (for now, assume operation failure, not per-record failure).
-- **Right now only commas (`,`) are valid delimiters.**
