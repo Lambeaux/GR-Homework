@@ -11,6 +11,8 @@ Repository for the submission. Details to follow.
 
 #### Input
 
+- Input files always have their fields in the specified order from the instructions (`lastName`,
+  `firstName`, `email`, `favoriteColor`, `dateOfBirth`).
 - Input files will have extension `.txt` regardless of the internal delimiter.
 - Input files are reasonably small enough such that the full contents of 10 - 200 documents can fit
   into memory at once (an approximation derived from Jetty's default threading configuration -
