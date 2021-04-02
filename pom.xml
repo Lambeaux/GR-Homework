@@ -20,13 +20,14 @@
 
         <!--  App dependencies  -->
         <ver.app.slf4j>1.7.30</ver.app.slf4j>
+        <ver.app.commons-lang>3.12.0</ver.app.commons-lang>
         <ver.app.jline>3.19.0</ver.app.jline>
         <ver.app.gson>2.8.6</ver.app.gson>
         <ver.app.javalin>3.13.4</ver.app.javalin>
     </properties>
 
     <dependencies>
-        <!--  Logging  -->
+        <!--  Logging, CLI, & Support  -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -37,23 +38,26 @@
             <artifactId>slf4j-simple</artifactId>
             <version>${ver.app.slf4j}</version>
         </dependency>
-        <!--  CLI  -->
         <dependency>
             <groupId>org.jline</groupId>
             <artifactId>jline</artifactId>
             <version>${ver.app.jline}</version>
         </dependency>
-        <!--  JSON Support  -->
         <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>${ver.app.gson}</version>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${ver.app.commons-lang}</version>
         </dependency>
-        <!--  REST Server (uses embedded Jetty)  -->
+        <!--  REST Server (uses embedded Jetty) & JSON Support  -->
         <dependency>
             <groupId>io.javalin</groupId>
             <artifactId>javalin</artifactId>
             <version>${ver.app.javalin}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${ver.app.gson}</version>
         </dependency>
         <!--  Test  -->
         <dependency>
