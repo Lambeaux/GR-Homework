@@ -15,10 +15,16 @@ import java.util.stream.Collectors;
 import net.lambeaux.homework.gr.core.Record;
 import net.lambeaux.homework.gr.persistence.InMemoryDatabase;
 import org.apache.commons.lang3.StringUtils;
+import org.jline.builtins.Completers;
+import org.jline.reader.Completer;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
+import org.jline.reader.impl.completer.AggregateCompleter;
+import org.jline.reader.impl.completer.ArgumentCompleter;
+import org.jline.reader.impl.completer.NullCompleter;
+import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.slf4j.Logger;
@@ -61,11 +67,27 @@ public class CommandLine {
 
   private final Terminal terminal;
 
+  private static Terminal defaultTerminal() throws IOException {
+    return TerminalBuilder.builder().system(true).build();
+  }
+
+  private static Completer defaultAutoComplete() {
+    return new AggregateCompleter(
+        new ArgumentCompleter(new StringsCompleter(CMD_SHOW), new NullCompleter()),
+        new ArgumentCompleter(
+            new StringsCompleter(CMD_INGEST),
+            new AggregateCompleter(
+                new Completers.DirectoriesCompleter(SYS_CURR_WORKING_DIR),
+                new Completers.FilesCompleter(SYS_CURR_WORKING_DIR)),
+            new NullCompleter()));
+  }
+
   public CommandLine(InMemoryDatabase db) throws IOException {
     this(
         db,
         LineReaderBuilder.builder()
-            .terminal(TerminalBuilder.builder().system(true).build())
+            .terminal(defaultTerminal())
+            .completer(defaultAutoComplete())
             .build(),
         SYS_CURR_WORKING_DIR);
   }
