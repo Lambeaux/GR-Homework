@@ -1,5 +1,8 @@
 package net.lambeaux.homework.gr;
 
+import static net.lambeaux.homework.gr.MiscValidation.noError;
+import static net.lambeaux.homework.gr.MiscValidation.validateThat;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,7 +16,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import net.lambeaux.homework.gr.core.Record;
 import net.lambeaux.homework.gr.persistence.InMemoryDatabase;
@@ -152,20 +154,21 @@ public class CommandLine {
    * @throws IllegalArgumentException if bad input was provided via cli.
    */
   public void handleInput(String line) throws IOException {
-    List<String> command =
+    List<String> cmd =
         Arrays.stream(line.split(WHITE_SPACE))
             .map(String::trim)
             .filter(str -> !str.isEmpty())
             .collect(Collectors.toList());
 
-    if (command.isEmpty()) {
+    if (cmd.isEmpty()) {
       LOGGER.debug("Command was empty [{}], no action taken", line);
       return;
     }
 
-    if (CMD_INGEST.equals(command.get(0))) {
-      validateIngest(command);
-      Path ingestFile = Paths.get(command.get(1));
+    if (CMD_INGEST.equals(cmd.get(0))) {
+      validateThat(() -> cmd.size() == 2, "expecting 1 argument for 'ingest' command");
+      validateThat(() -> noError(() -> Paths.get(cmd.get(1))), "argument must be a valid path");
+      Path ingestFile = Paths.get(cmd.get(1));
       Path ingestFileToUse =
           ingestFile.isAbsolute() ? ingestFile : systemWorkingDir.resolve(ingestFile);
       ingest(ingestFileToUse).forEach(rec -> db.put(rec.getEmail(), rec));
@@ -175,9 +178,9 @@ public class CommandLine {
       return;
     }
 
-    if (CMD_LIST.equals(command.get(0))) {
-      validateList(command);
-      SortedSet<Record> results = list(command.get(1));
+    if (CMD_LIST.equals(cmd.get(0))) {
+      validateThat(() -> cmd.size() == 2, "expecting 1 argument for 'list' command");
+      SortedSet<Record> results = list(cmd.get(1));
       terminal.writer().println(" ---------------- Listing entries -----------------");
       results.forEach((rec) -> terminal.writer().println(rec.toString()));
       terminal.writer().println(" --------------------------------------------------");
@@ -214,52 +217,17 @@ public class CommandLine {
     return results;
   }
 
-  private static void validateList(List<String> cmd) {
-    assertThat(() -> cmd.size() == 2, "expecting 1 argument for 'list' command");
-  }
-
   private List<Record> ingest(Path filePath) throws IOException {
     File file = Objects.requireNonNull(filePath, "filePath cannot be null").toFile();
-    if (!file.exists()) {
-      throw new IllegalArgumentException("file " + file.toString() + " must exist");
-    }
-    if (!file.isFile()) {
-      throw new IllegalArgumentException("file " + file.toString() + " must be a file with data");
-    }
+    validateThat(file::exists, "file " + file.toString() + " must exist");
+    validateThat(file::isFile, "file " + file.toString() + " must be a file with data");
+
     String absPath = file.getAbsolutePath();
     String ext = absPath.substring(absPath.lastIndexOf('.') + 1);
-    if (!parsers.containsKey(ext)) {
-      throw new IllegalArgumentException("file " + file.toString() + " is not a supported format");
-    }
+    validateThat(
+        () -> parsers.containsKey(ext), "file " + file.toString() + " is not a supported format");
+
     return parsers.get(ext).read(filePath);
-  }
-
-  private static void validateIngest(List<String> cmd) {
-    assertThat(() -> cmd.size() == 2, "expecting 1 argument for 'ingest' command");
-    assertThat(() -> noError(() -> Paths.get(cmd.get(1))), "argument must be a valid path");
-  }
-
-  private static void assertThat(Supplier<Boolean> cond, String errMsg) {
-    boolean check;
-    try {
-      check = cond.get();
-    } catch (RuntimeException e) {
-      throw new IllegalArgumentException("error executing command, " + errMsg, e);
-    }
-    if (!check) {
-      throw new IllegalArgumentException("error executing command, " + errMsg);
-    }
-  }
-
-  private static boolean noError(Runnable test) {
-    try {
-      test.run();
-      return true;
-    } catch (RuntimeException e) {
-      LOGGER.trace("noError test failed, returning false", e);
-      LOGGER.debug(e.getMessage());
-      return false;
-    }
   }
 
   /** Can parse input files based upon the provided delimiter. */
