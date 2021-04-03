@@ -6,10 +6,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import net.lambeaux.homework.gr.core.Record;
@@ -54,8 +57,13 @@ public class CommandLine {
 
   private static final String CMD_INGEST = "ingest";
 
-  // for debugging purposes, will be superseded by list commands
-  private static final String CMD_SHOW = "show";
+  private static final String CMD_LIST = "list";
+
+  private static final String ARG_OUTPUT_1 = "output1-email-desc-lastname-asc";
+
+  private static final String ARG_OUTPUT_2 = "output2-birthdate-asc";
+
+  private static final String ARG_OUTPUT_3 = "output3-lastname-desc";
 
   private final Map<String, IngestStrategy> parsers;
 
@@ -73,7 +81,9 @@ public class CommandLine {
 
   private static Completer defaultAutoComplete() {
     return new AggregateCompleter(
-        new ArgumentCompleter(new StringsCompleter(CMD_SHOW), new NullCompleter()),
+        new ArgumentCompleter(
+            new StringsCompleter(CMD_LIST),
+            new StringsCompleter(ARG_OUTPUT_1, ARG_OUTPUT_2, ARG_OUTPUT_3)),
         new ArgumentCompleter(
             new StringsCompleter(CMD_INGEST),
             new AggregateCompleter(
@@ -158,23 +168,18 @@ public class CommandLine {
       Path ingestFile = Paths.get(command.get(1));
       Path ingestFileToUse =
           ingestFile.isAbsolute() ? ingestFile : systemWorkingDir.resolve(ingestFile);
-      ingest(ingestFileToUse).forEach(rec -> db.put(rec.get("email"), rec));
+      ingest(ingestFileToUse).forEach(rec -> db.put(rec.getEmail(), rec));
       terminal
           .writer()
           .println(String.format("Successfully ingested '%s'", ingestFileToUse.toString()));
       return;
     }
 
-    if (CMD_SHOW.equals(command.get(0))) {
-      terminal.writer().println(" --------------- All stored records ---------------");
-      db.allValues()
-          .forEach(
-              (entry) -> {
-                terminal.writer().println(entry.getKey() + ":");
-                entry
-                    .getValue()
-                    .forEach((key, value) -> terminal.writer().println("  " + key + ": " + value));
-              });
+    if (CMD_LIST.equals(command.get(0))) {
+      validateList(command);
+      SortedSet<Record> results = list(command.get(1));
+      terminal.writer().println(" ---------------- Listing entries -----------------");
+      results.forEach((rec) -> terminal.writer().println(rec.toString()));
       terminal.writer().println(" --------------------------------------------------");
       return;
     }
@@ -182,7 +187,38 @@ public class CommandLine {
     terminal.writer().println("Unrecognized command");
   }
 
-  private List<Map<String, String>> ingest(Path filePath) throws IOException {
+  private SortedSet<Record> list(String outputType) {
+    SortedSet<Record> results;
+    switch (outputType) {
+      case ARG_OUTPUT_1:
+        results =
+            new TreeSet<>(
+                Comparator.comparing(Record::getEmail, Comparator.reverseOrder())
+                    .thenComparing(Record::getLastName, Comparator.naturalOrder()));
+        break;
+      case ARG_OUTPUT_2:
+        results =
+            new TreeSet<>(Comparator.comparing(Record::getDateOfBirth, Comparator.naturalOrder()));
+        break;
+      case ARG_OUTPUT_3:
+        results =
+            new TreeSet<>(Comparator.comparing(Record::getLastName, Comparator.reverseOrder()));
+        break;
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "invalid output format, expected %s, %s, or %s",
+                ARG_OUTPUT_1, ARG_OUTPUT_2, ARG_OUTPUT_3));
+    }
+    results.addAll(db.allValues());
+    return results;
+  }
+
+  private static void validateList(List<String> cmd) {
+    assertThat(() -> cmd.size() == 2, "expecting 1 argument for 'list' command");
+  }
+
+  private List<Record> ingest(Path filePath) throws IOException {
     File file = Objects.requireNonNull(filePath, "filePath cannot be null").toFile();
     if (!file.exists()) {
       throw new IllegalArgumentException("file " + file.toString() + " must exist");
@@ -238,10 +274,10 @@ public class CommandLine {
       this.delimiter = delimiter;
     }
 
-    public List<Map<String, String>> read(Path filePath) throws IOException {
+    public List<Record> read(Path filePath) throws IOException {
       return Files.lines(filePath)
           .map(line -> line.split(delimiter))
-          .map(Record::create)
+          .map(Record::new)
           .collect(Collectors.toList());
     }
   }

@@ -1,35 +1,113 @@
 package net.lambeaux.homework.gr.core;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Objects;
 
 /** Main data structure being managed by the application. */
 public class Record {
 
-  /**
-   * Creates a record as a map from an array of fields. Order of fields must be:
-   *
-   * <ol>
-   *   <li>{@code lastName}
-   *   <li>{@code firstName}
-   *   <li>{@code email}
-   *   <li>{@code favoriteColor}
-   *   <li>{@code dateOfBirth}
-   * </ol>
-   *
-   * Note the fields are still zero based despite the rendering of the above list.
-   *
-   * @param fields array of strings containing the record's values.
-   * @return a record as a map.
-   */
-  public static Map<String, String> create(String[] fields) {
-    Map<String, String> entry = new HashMap<>();
-    entry.put("lastName", Objects.requireNonNull(fields[0]).trim());
-    entry.put("firstName", Objects.requireNonNull(fields[1]).trim());
-    entry.put("email", Objects.requireNonNull(fields[2]).trim());
-    entry.put("favoriteColor", Objects.requireNonNull(fields[3]).trim());
-    entry.put("dateOfBirth", Objects.requireNonNull(fields[4]).trim());
-    return entry;
+  private static final String DATE_FORMAT = "MM/dd/yyyy";
+
+  private final transient SimpleDateFormat dateFormat;
+
+  private final String lastName;
+
+  private final String firstName;
+
+  private final String email;
+
+  private final String favoriteColor;
+
+  private final Date dateOfBirth;
+
+  public Record(String[] fields) {
+    this(fields[0], fields[1], fields[2], fields[3], fields[4]);
+  }
+
+  public Record(
+      String lastName, String firstName, String email, String favoriteColor, String dateOfBirth) {
+    this.dateFormat = new SimpleDateFormat(DATE_FORMAT);
+
+    this.lastName = Objects.requireNonNull(lastName, "lastName cannot be null").trim();
+    this.firstName = Objects.requireNonNull(firstName, "firstName cannot be null").trim();
+    this.email = Objects.requireNonNull(email, "email cannot be null").trim();
+    this.favoriteColor =
+        Objects.requireNonNull(favoriteColor, "favoriteColor cannot be null").trim();
+
+    this.dateOfBirth =
+        parseDate(Objects.requireNonNull(dateOfBirth, "dateOfBirth cannot be null").trim());
+  }
+
+  public String getLastName() {
+    return lastName;
+  }
+
+  public String getFirstName() {
+    return firstName;
+  }
+
+  public String getEmail() {
+    return email;
+  }
+
+  public String getFavoriteColor() {
+    return favoriteColor;
+  }
+
+  public Date getDateOfBirth() {
+    return dateOfBirth;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    Record record = (Record) o;
+
+    if (!getLastName().equals(record.getLastName())) {
+      return false;
+    }
+    if (!getFirstName().equals(record.getFirstName())) {
+      return false;
+    }
+    if (!getEmail().equals(record.getEmail())) {
+      return false;
+    }
+    if (!getFavoriteColor().equals(record.getFavoriteColor())) {
+      return false;
+    }
+    return getDateOfBirth().equals(record.getDateOfBirth());
+  }
+
+  @Override
+  public int hashCode() {
+    int result = getLastName().hashCode();
+    result = 31 * result + getFirstName().hashCode();
+    result = 31 * result + getEmail().hashCode();
+    result = 31 * result + getFavoriteColor().hashCode();
+    result = 31 * result + getDateOfBirth().hashCode();
+    return result;
+  }
+
+  @Override
+  public String toString() {
+    return String.format(
+        "%s %s (%s), born %s, likes %s",
+        firstName, lastName, email, dateFormat.format(dateOfBirth), favoriteColor);
+  }
+
+  private Date parseDate(String date) {
+    try {
+      return dateFormat.parse(date);
+    } catch (ParseException e) {
+      throw new IllegalArgumentException("date could not be parsed", e);
+    }
   }
 }
