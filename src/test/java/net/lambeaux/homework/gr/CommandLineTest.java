@@ -1,5 +1,6 @@
 package net.lambeaux.homework.gr;
 
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
@@ -243,84 +244,84 @@ public class CommandLineTest {
   ----------------------------------------------------------
   */
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testIngestCommandNoArg() throws IOException {
-    commandLine.handleInput("ingest");
+  @Test
+  public void testIngestCommandNoArg() {
+    assertThrows(IllegalArgumentException.class, () -> commandLine.handleInput("ingest"));
 
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testIngestCommandRelInvalidPathArg() throws IOException {
+  @Test
+  public void testIngestCommandRelInvalidPathArg() {
     String input = String.format("ingest %s", DOES_NOT_EXIST);
     LOGGER.info("Running command '{}'", input);
 
-    commandLine.handleInput(input);
+    assertThrows(IllegalArgumentException.class, () -> commandLine.handleInput(input));
 
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testIngestCommandAbsInvalidPathArg() throws IOException {
+  @Test
+  public void testIngestCommandAbsInvalidPathArg() {
     Path abs = folder.getRoot().toPath().resolve(DOES_NOT_EXIST);
     String input = String.format("ingest %s", abs.toString());
     LOGGER.info("Running command '{}'", input);
 
-    commandLine.handleInput(input);
+    assertThrows(IllegalArgumentException.class, () -> commandLine.handleInput(input));
 
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testIngestCommandRelDirectoryPath() throws IOException {
+  @Test
+  public void testIngestCommandRelDirectoryPath() {
     String input = String.format("ingest %s", FOLDER_THAT_EXISTS);
     LOGGER.info("Running command '{}'", input);
 
-    commandLine.handleInput(input);
+    assertThrows(IllegalArgumentException.class, () -> commandLine.handleInput(input));
 
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testIngestCommandAbsDirectoryPath() throws IOException {
+  @Test
+  public void testIngestCommandAbsDirectoryPath() {
     Path abs = folder.getRoot().toPath().resolve(FOLDER_THAT_EXISTS);
     String input = String.format("ingest %s", abs.toString());
     LOGGER.info("Running command '{}'", input);
 
-    commandLine.handleInput(input);
+    assertThrows(IllegalArgumentException.class, () -> commandLine.handleInput(input));
 
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testIngestCommandRelUnsupportedExtension() throws IOException {
+  @Test
+  public void testIngestCommandRelUnsupportedExtension() {
     String input = String.format("ingest %s", FILE_UNSUPPORTED_DOT_TXT);
     LOGGER.info("Running command '{}'", input);
 
-    commandLine.handleInput(input);
+    assertThrows(IllegalArgumentException.class, () -> commandLine.handleInput(input));
 
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testIngestCommandAbsUnsupportedExtension() throws IOException {
+  @Test
+  public void testIngestCommandAbsUnsupportedExtension() {
     Path abs = folder.getRoot().toPath().resolve(FILE_UNSUPPORTED_DOT_TXT);
     String input = String.format("ingest %s", abs.toString());
     LOGGER.info("Running command '{}'", input);
 
-    commandLine.handleInput(input);
+    assertThrows(IllegalArgumentException.class, () -> commandLine.handleInput(input));
 
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
@@ -378,18 +379,18 @@ public class CommandLineTest {
   ----------------------------------------------------------
   */
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testListCommandNoArg() throws IOException {
-    commandLine.handleInput("list");
+  @Test
+  public void testListCommandNoArg() {
+    assertThrows(IllegalArgumentException.class, () -> commandLine.handleInput("list"));
 
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
     verifyZeroInteractions(mockDb, mockTerminal, mockPrintWriter);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testListCommandBadOutputOption() throws IOException {
-    commandLine.handleInput("list hi");
+  @Test
+  public void testListCommandBadOutputOption() {
+    assertThrows(IllegalArgumentException.class, () -> commandLine.handleInput("list hi"));
 
     verify(mockLineReader).getTerminal();
     verifyNoMoreInteractions(mockLineReader);
@@ -401,6 +402,26 @@ public class CommandLineTest {
   Support
   ----------------------------------------------------------
   */
+
+  @FunctionalInterface
+  private interface CheckedRunnable {
+    void run() throws Exception;
+  }
+
+  private static void assertThrows(Class<? extends Exception> clazz, CheckedRunnable test) {
+    try {
+      test.run();
+      fail("Expected a " + clazz.getName() + " to be thrown, but no exception was thrown");
+    } catch (Exception e) {
+      if (clazz.isInstance(e)) {
+        return;
+      }
+      fail(
+          String.format(
+              "Expected a %s to be thrown, but a %s was thrown instead",
+              clazz.getName(), e.getClass().getName()));
+    }
+  }
 
   private void verifyListOutput1() {
     InOrder orderedCall = inOrder(mockPrintWriter);
