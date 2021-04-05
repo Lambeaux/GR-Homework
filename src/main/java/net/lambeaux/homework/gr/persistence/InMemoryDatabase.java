@@ -13,6 +13,10 @@ public class InMemoryDatabase {
     this.data = new HashMap<>();
   }
 
+  InMemoryDatabase(Map<String, Record> data) {
+    this.data = data;
+  }
+
   public Collection<Record> allValues() {
     return data.values();
   }

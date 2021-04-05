@@ -11,6 +11,7 @@ import io.javalin.http.staticfiles.Location;
 import io.javalin.plugin.json.JavalinJson;
 import java.util.HashMap;
 import java.util.Map;
+import net.lambeaux.homework.gr.core.ContentReader;
 import net.lambeaux.homework.gr.persistence.InMemoryDatabase;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -35,18 +36,22 @@ public class App {
 
   public static void main(String[] args) throws Exception {
     LOGGER.info("Initializing dependencies");
+
+    ContentReader contentReader = new ContentReader();
     InMemoryDatabase db = new InMemoryDatabase();
-    CommandLine commandLine = new CommandLine(db);
 
     JavalinJson.setFromJsonMapper(GSON::fromJson);
     JavalinJson.setToJsonMapper(GSON::toJson);
 
     LOGGER.info("Booting up server");
+
     Javalin app = Javalin.create(App::configureJavalin).start(PORT);
 
     LOGGER.info("Registering handlers");
     app.get("/extras/request-summary", new RequestSummaryHandler());
 
+    Handlers.inject(app, db, contentReader);
+    CommandLine commandLine = new CommandLine(db);
     commandLine.loop();
   }
 
