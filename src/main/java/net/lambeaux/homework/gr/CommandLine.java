@@ -5,18 +5,16 @@ import static net.lambeaux.homework.gr.MiscValidation.validateThat;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import net.lambeaux.homework.gr.core.ContentReader;
 import net.lambeaux.homework.gr.core.Record;
 import net.lambeaux.homework.gr.persistence.InMemoryDatabase;
 import org.apache.commons.lang3.StringUtils;
@@ -51,12 +49,6 @@ public class CommandLine {
 
   private static final String WHITE_SPACE = " ";
 
-  private static final String EXT_CSV = "csv";
-
-  private static final String EXT_PSV = "psv";
-
-  private static final String EXT_SSV = "ssv";
-
   private static final String CMD_INGEST = "ingest";
 
   private static final String CMD_LIST = "list";
@@ -67,13 +59,13 @@ public class CommandLine {
 
   private static final String ARG_OUTPUT_3 = "output3-lastname-desc";
 
-  private final Map<String, IngestStrategy> parsers;
-
-  private final Path systemWorkingDir;
+  private final ContentReader contentReader;
 
   private final InMemoryDatabase db;
 
   private final LineReader lineReader;
+
+  private final Path systemWorkingDir;
 
   private final Terminal terminal;
 
@@ -109,11 +101,7 @@ public class CommandLine {
     this.db = Objects.requireNonNull(db, "database cannot be null");
     this.lineReader = Objects.requireNonNull(lineReader, "line reader cannot be null");
     this.terminal = Objects.requireNonNull(lineReader.getTerminal(), "terminal cannot be null");
-
-    this.parsers = new HashMap<>();
-    this.parsers.put(EXT_CSV, new IngestStrategy(","));
-    this.parsers.put(EXT_PSV, new IngestStrategy("\\|"));
-    this.parsers.put(EXT_SSV, new IngestStrategy(WHITE_SPACE));
+    this.contentReader = new ContentReader();
   }
 
   /**
@@ -222,31 +210,10 @@ public class CommandLine {
     validateThat(file::exists, "file " + file.toString() + " must exist");
     validateThat(file::isFile, "file " + file.toString() + " must be a file with data");
 
-    String absPath = file.getAbsolutePath();
-    String ext = absPath.substring(absPath.lastIndexOf('.') + 1);
     validateThat(
-        () -> parsers.containsKey(ext), "file " + file.toString() + " is not a supported format");
+        () -> contentReader.canHandle(filePath),
+        "file " + file.toString() + " is not a supported format");
 
-    return parsers.get(ext).read(filePath);
-  }
-
-  /** Can parse input files based upon the provided delimiter. */
-  private static class IngestStrategy {
-
-    private final String delimiter;
-
-    public IngestStrategy(String delimiter) {
-      if (Objects.requireNonNull(delimiter, "delimiter cannot be null").isEmpty()) {
-        throw new IllegalArgumentException("delimiter cannot be empty");
-      }
-      this.delimiter = delimiter;
-    }
-
-    public List<Record> read(Path filePath) throws IOException {
-      return Files.lines(filePath)
-          .map(line -> line.split(delimiter))
-          .map(Record::new)
-          .collect(Collectors.toList());
-    }
+    return contentReader.read(filePath);
   }
 }
