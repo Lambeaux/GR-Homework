@@ -8,6 +8,9 @@ Repository for the submission. Details to follow.
 
 - By "display dates in the format `M/D/YYYY`" it meant `MM/DD/YYYY` since months and days are not
   limited to single digits.
+- Where files support multiple records, the REST service (POST) only supports one at a time.
+- Sorting within the REST service will return natural order.
+- Sorting by name gives last name higher priority than first name.
 
 #### Input Content
 
@@ -32,3 +35,4 @@ Repository for the submission. Details to follow.
 
 - If emails are unique, some ordering options aren't very useful and tests won't actually be able to
 prove the ordering works.
+- The same file extensions can be used as `text/~` mimetypes with the REST service.

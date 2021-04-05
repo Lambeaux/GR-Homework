@@ -31,7 +31,8 @@ public class App {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
 
-  private static final Gson GSON = new GsonBuilder().create();
+  private static final Gson GSON =
+      new GsonBuilder().setPrettyPrinting().setDateFormat("MM/dd/yyyy").create();
 
   private static final Integer PORT = 8080;
 
