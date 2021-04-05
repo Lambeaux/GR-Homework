@@ -65,7 +65,8 @@ public class ContentReader {
   private String getExt(Context context) {
     String contentType =
         Objects.requireNonNull(context.contentType(), "content type cannot be null");
-    String[] parts = contentType.split("/");
+    String mimeType = contentType.split(";")[0];
+    String[] parts = mimeType.split("/");
     validateThat(
         () -> parts.length == 2, String.format("malformed content-type '%s'", contentType));
     validateThat(

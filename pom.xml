@@ -16,8 +16,11 @@
         <ver.mvn.assembly-plugin>3.3.0</ver.mvn.assembly-plugin>
         <ver.mvn.spotless-plugin>2.9.0</ver.mvn.spotless-plugin>
         <ver.mvn.google-java-format>1.7</ver.mvn.google-java-format>
+
+        <!--  Test dependencies  -->
         <ver.test.junit>4.12</ver.test.junit>
         <ver.test.mockito>1.10.19</ver.test.mockito>
+        <ver.test.rest-assured>4.3.3</ver.test.rest-assured>
 
         <!--  App dependencies  -->
         <ver.app.slf4j>1.7.30</ver.app.slf4j>
@@ -72,6 +75,11 @@
             <artifactId>mockito-all</artifactId>
             <version>${ver.test.mockito}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>${ver.test.rest-assured}</version>
         </dependency>
     </dependencies>
 

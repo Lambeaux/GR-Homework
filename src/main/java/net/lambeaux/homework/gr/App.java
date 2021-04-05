@@ -9,6 +9,7 @@ import io.javalin.http.Context;
 import io.javalin.http.Handler;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.plugin.json.JavalinJson;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import net.lambeaux.homework.gr.core.ContentReader;
@@ -35,24 +36,28 @@ public class App {
   private static final Integer PORT = 8080;
 
   public static void main(String[] args) throws Exception {
-    LOGGER.info("Initializing dependencies");
-
     ContentReader contentReader = new ContentReader();
     InMemoryDatabase db = new InMemoryDatabase();
 
+    LOGGER.info("Booting up server");
+    Javalin app = Javalin.create(App::configureJavalin).start(PORT);
+    startAppWithDependencies(app, contentReader, db, true);
+  }
+
+  public static void startAppWithDependencies(
+      Javalin app, ContentReader contentReader, InMemoryDatabase db, boolean cli)
+      throws IOException {
     JavalinJson.setFromJsonMapper(GSON::fromJson);
     JavalinJson.setToJsonMapper(GSON::toJson);
-
-    LOGGER.info("Booting up server");
-
-    Javalin app = Javalin.create(App::configureJavalin).start(PORT);
 
     LOGGER.info("Registering handlers");
     app.get("/extras/request-summary", new RequestSummaryHandler());
 
     Handlers.inject(app, db, contentReader);
-    CommandLine commandLine = new CommandLine(db);
-    commandLine.loop();
+    if (cli) {
+      CommandLine commandLine = new CommandLine(db);
+      commandLine.loop();
+    }
   }
 
   private static void configureJavalin(JavalinConfig config) {

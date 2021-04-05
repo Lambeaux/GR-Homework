@@ -2,13 +2,16 @@ package net.lambeaux.homework.gr;
 
 import static org.mockito.Mockito.doReturn;
 
+import io.javalin.Javalin;
 import io.javalin.http.Context;
 import java.util.HashMap;
 import java.util.Map;
 import net.lambeaux.homework.gr.core.ContentReader;
 import net.lambeaux.homework.gr.core.Record;
 import net.lambeaux.homework.gr.persistence.InMemoryDatabase;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -21,6 +24,14 @@ public class HandlersTest {
   @Mock Context mockContext;
 
   private Map<String, Record> data;
+
+  @BeforeClass
+  public static void beforeClass() {
+    Javalin javalin = Javalin.create();
+  }
+
+  @AfterClass
+  public static void afterClass() {}
 
   @Before
   public void before() {
