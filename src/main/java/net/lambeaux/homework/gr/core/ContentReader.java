@@ -1,18 +1,25 @@
 package net.lambeaux.homework.gr.core;
 
+import static net.lambeaux.homework.gr.MiscValidation.noErrorChecked;
 import static net.lambeaux.homework.gr.MiscValidation.validateThat;
 
 import io.javalin.http.Context;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ContentReader {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(ContentReader.class);
 
   private static final String WHITE_SPACE = " ";
 
@@ -44,7 +51,7 @@ public class ContentReader {
     validateThat(
         () -> parser != null,
         "file " + filePath.toAbsolutePath().toString() + " is not a supported format");
-    return parser.read(filePath);
+    return parser.readAndReport(filePath);
   }
 
   public Record read(Context context) {
@@ -86,15 +93,95 @@ public class ContentReader {
       this.delimiter = delimiter;
     }
 
+    private List<Record> readAndReport(Path filePath) throws IOException {
+      List<ParseResult> results =
+          Files.lines(filePath)
+              .map(line -> line.split(delimiter))
+              .map(ParseResult::new)
+              .collect(Collectors.toList());
+
+      List<String> badLines =
+          results.stream()
+              .filter(r -> !r.isValid())
+              .map(ParseResult::getErr)
+              .collect(Collectors.toList());
+
+      badLines.forEach(line -> LOGGER.info("Invalid record found within input file: " + line));
+
+      return results.stream()
+          .filter(ParseResult::isValid)
+          .map(ParseResult::getRecord)
+          .collect(Collectors.toList());
+    }
+
     private List<Record> read(Path filePath) throws IOException {
       return Files.lines(filePath)
           .map(line -> line.split(delimiter))
+          .peek(
+              array -> {
+                if (array.length != 5) {
+                  throw new IllegalArgumentException(
+                      "Bad record found within input " + Arrays.toString(array));
+                }
+              })
           .map(Record::new)
           .collect(Collectors.toList());
     }
 
     private Record read(String entity) {
       return new Record(entity.split(delimiter));
+    }
+  }
+
+  private static class ParseResult {
+
+    private final Record record;
+
+    private final String err;
+
+    private ParseResult(String[] array) {
+      String errStr = validate(array);
+      if (errStr == null) {
+        this.record = new Record(array);
+        this.err = null;
+      } else {
+        this.record = null;
+        this.err = errStr;
+      }
+    }
+
+    public boolean isValid() {
+      return record != null;
+    }
+
+    public Record getRecord() {
+      return record;
+    }
+
+    public String getErr() {
+      return err;
+    }
+
+    private String validate(String[] array) {
+      try {
+        validateThat(
+            () -> array.length == 5, "expected five fields on array, " + Arrays.toString(array));
+        validateThat(() -> !array[0].trim().isEmpty(), "");
+        validateThat(() -> !array[1].trim().isEmpty(), "");
+        validateThat(() -> !array[2].trim().isEmpty(), "");
+        validateThat(() -> !array[3].trim().isEmpty(), "");
+        validateThat(() -> !array[4].trim().isEmpty(), "");
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+        boolean b = noErrorChecked(() -> dateFormat.parse(array[4].trim()));
+        if (!b) {
+          throw new IllegalArgumentException("Cannot parse date " + array[4].trim());
+        }
+      } catch (IllegalArgumentException e) {
+        LOGGER.trace("Exception during validation", e);
+        return e.getMessage();
+      }
+      return null;
     }
   }
 }

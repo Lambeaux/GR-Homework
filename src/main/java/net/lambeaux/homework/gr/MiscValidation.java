@@ -31,6 +31,18 @@ public class MiscValidation {
     }
   }
 
+  public static void validateThatChecked(CheckedSupplier<Boolean> cond, String errMsg) {
+    boolean check;
+    try {
+      check = cond.get();
+    } catch (Exception e) {
+      throw new IllegalArgumentException("error executing command, " + errMsg, e);
+    }
+    if (!check) {
+      throw new IllegalArgumentException("error executing command, " + errMsg);
+    }
+  }
+
   /**
    * Can be used to assure the caller that the provided {@link Runnable} did not throw a {@link
    * RuntimeException}.
@@ -44,6 +56,27 @@ public class MiscValidation {
       test.run();
       return true;
     } catch (RuntimeException e) {
+      LOGGER.trace("noError test failed, returning false", e);
+      LOGGER.debug(e.getMessage());
+      return false;
+    }
+  }
+
+  @FunctionalInterface
+  public interface CheckedRunnable {
+    void run() throws Exception;
+  }
+
+  @FunctionalInterface
+  public interface CheckedSupplier<T> {
+    T get() throws Exception;
+  }
+
+  public static boolean noErrorChecked(CheckedRunnable test) {
+    try {
+      test.run();
+      return true;
+    } catch (Exception e) {
       LOGGER.trace("noError test failed, returning false", e);
       LOGGER.debug(e.getMessage());
       return false;
