@@ -74,6 +74,17 @@ fabric.properties
 .lein-repl-history
 .nrepl-port
 
+/target
+/lib
+/classes
+/checkouts
+pom.xml
+pom.xml.asc
+*.jar
+*.class
+/.lein-*
+/.nrepl-port
+
 # --------------------------------------------------------------
 # BUILD - MAVEN
 # --------------------------------------------------------------
