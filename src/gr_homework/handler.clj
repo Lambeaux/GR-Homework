@@ -3,7 +3,8 @@
             [compojure.route :as route]
             [clojure.string :as str]
             [clojure.java.io :as io]
-            [ring.middleware.defaults :refer [wrap-defaults site-defaults]])
+            [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
+            [ring.util.request :as ring])
   (:import (java.text SimpleDateFormat ParseException)))
 
 ;; --------------------------------------------------------------------------
@@ -89,10 +90,7 @@
 
 (defroutes app-routes
            (GET "/" [] "Hello Worlds!")
-           (POST "/records" [req]
-             (let [body (with-open [rdr (io/reader (:body req))]
-                          (doall (line-seq rdr)))]
-               (first body)))
+           (POST "/records" [:as req] (str "hi " (ring/body-string req)))
            (route/not-found "Not Found"))
 
 (def app
